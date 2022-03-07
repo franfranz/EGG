@@ -14,7 +14,7 @@ python -m play_sum_v04_03 --mode 'gs' --train_data "fullset_train.txt" --validat
 In this particular instance, the following parameters (from basic_games) are invoked:
  * `mode` -- tells whether to use Reinforce (`rf`) or Gumbel-Softmax (`gs`) for training.
  * `train_data/validation_data` -- paths to the files containing training data and validation data (the latter used at each epoch to track the progress of training); both files are in the same format.
- * `n_attributes` -- this is the number of "fields" that the input file vectors have: for example, given the input file linked above, `n_attributes` should be set to 5.
+ * `n_attributes` -- this is the number of "fields" that the input file vectors have, namely the number of integers to be added in the sum: for example, given the input file linked above, `n_attributes` should be set to 2.
  * `n_values` -- number of distinct values that each input file vector field can take. As we are counting from 0, if the maximum value is 2 (as in the example file above), `n_values` should be set to 3 (and 0 constitutes a possible value).
  * `n_epochs` -- how many times the data in the input training file will be traversed during training: note that they will be traversed in a different random order each time.
  * `batch_size` -- batch size for training data (can't be smaller than number of items in training file).
