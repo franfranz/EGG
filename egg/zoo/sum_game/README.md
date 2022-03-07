@@ -8,7 +8,7 @@ The game reads input from files that have the integers to sum (values) on each l
 Here is an example of how to run the sum game. It actually does not work right now (v4_02). 
 
 ```bash
-python -m play_sum_v4_03 --mode 'gs' --train_data "fullset_train.txt" --validation_data "fullset_train.txt" --n_attributes 2 --n_values 21 --n_epochs 10 --batch_size 50 --validation_batch_size 50 --max_len 1 --vocab_size 100 --sender_hidden 50 --receiver_hidden 50 --sender_embedding 10 --receiver_embedding 10 --receiver_cell "gru" --sender_cell "gru" --lr 0.01 --random_seed 1 --print_validation_event
+python -m play_sum_v04_03 --mode 'gs' --train_data "fullset_train.txt" --validation_data "fullset_train.txt" --n_attributes 2 --n_values 21 --n_epochs 10 --batch_size 50 --validation_batch_size 50 --max_len 1 --vocab_size 100 --sender_hidden 50 --receiver_hidden 50 --sender_embedding 10 --receiver_embedding 10 --receiver_cell "gru" --sender_cell "gru" --lr 0.01 --random_seed 1 --print_validation_event
 ```
 
 In this particular instance, the following parameters (from basic_games) are invoked:
@@ -30,5 +30,5 @@ In this particular instance, the following parameters (from basic_games) are inv
  To see all arguments that can be passed (and for more information on the ones above), run:
  
  ```bash
-python -m play_sum_v4_03 -h
+python -m play_sum_v04_03 -h
 ```
