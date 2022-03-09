@@ -246,9 +246,13 @@ def main(params):
            ):
             # in the discriminative case, accuracy is computed by comparing the index with highest score in Receiver output (a distribution of unnormalized
             # probabilities over target poisitions) and the corresponding label read from input, indicating the ground-truth position of the target
+            # acc = (receiver_output.argmax(dim=1) == labels).detach().float() # former Discri acc
+            # new acc
             acc = (receiver_output.argmax(dim=1) == labels).detach().float()
             # similarly, the loss computes cross-entropy between the Receiver-produced target-position probability distribution and the labels
             loss = F.cross_entropy(receiver_output, labels, reduction="none")
+            #print(loss, labels, _receiver_input, receiver_output, _message)
+            print("acc", acc, "labels", labels, "messages", _message)
             return loss, {"acc": acc}
 
         # again, see data_readers.py in this directory for the AttValRecoDataset data reading class
