@@ -3,12 +3,12 @@
 Sum game is derived from the [basic_games](https://github.com/franfranz/EGG/tree/main/egg/zoo/basic_games) tasks, and shares most of their architecture. </br>
 In the Sum game task, Sender gets two integers as an input, it sends a message to Receiver, and Receiver must generate an output that equals the sum of the integers. 
 
-The game reads input from files that have the integers to sum (values) on each line, as in [this example file](https://github.com/franfranz/EGG/blob/main/egg/zoo/sum_game/fullset_train.txt), containing the integers from 0 to 20. 
+The game reads input from files that have the integers to sum (values) on each line, as in [this example file](https://github.com/franfranz/EGG/blob/main/egg/zoo/sum_game/input_data_generation/fullset_train_n5.txt), containing the integers from 0 to 5. 
 
 Here is an example of how to run the sum game. 
 
 ```bash
-python -m play_sum_v05_01 --mode 'gs' --train_data "fullset_train.txt" --validation_data "fullset_train.txt" --n_attributes 2 --n_values 21 --n_epochs 10 --batch_size 50 --validation_batch_size 50 --max_len 1 --vocab_size 100 --sender_hidden 50 --receiver_hidden 50 --sender_embedding 10 --receiver_embedding 10 --receiver_cell "gru" --sender_cell "gru" --lr 0.01 --random_seed 1 --print_validation_event
+python -m play_sum_v05_03 --mode 'gs' --train_data "fullset_train_n5.txt" --validation_data "train_test_set_n5_S0.txt" --n_attributes 2 --n_values 7 --n_epochs 120 --batch_size 512 --validation_batch_size 1000 --max_len 1 --vocab_size 500 --sender_hidden 256 --receiver_hidden 512 --sender_embedding 5 --receiver_embedding 30 --receiver_cell "gru" --sender_cell "gru" --lr 0.01 --random_seed 1 --temperature 3 --print_validation_events
 ```
 
 In this particular instance, the following parameters (from basic_games) are invoked:
@@ -30,5 +30,5 @@ In this particular instance, the following parameters (from basic_games) are inv
  To see all arguments that can be passed (and for more information on the ones above), run:
  
  ```bash
-python -m play_sum_v05_01 -h
+python -m play_sum_v05_03 -h
 ```
