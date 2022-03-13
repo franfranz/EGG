@@ -25,7 +25,8 @@ class RecoReceiver(nn.Module):
     def forward(self, x, _input, _aux_input):
         return self.output(x)
 
-    
+
+## define Sender    
 class Sender(nn.Module):
     def __init__(self, n_hidden, n_features):
         super(Sender, self).__init__()
@@ -33,13 +34,9 @@ class Sender(nn.Module):
 
     def forward(self, x, _aux_input):
         return self.fc1(x)
-        # here, it might make sense to add a non-linearity, such as tanh         
-        
-
+            
         
 ## define AttValReco dataset
-# this was imported from data_readers in the original basic_games
-'''   
 class AttValRecoDataset(Dataset):
     def __init__(self, path, n_attributes, n_values):
         frame = np.loadtxt(path, dtype="S10")
@@ -51,7 +48,8 @@ class AttValRecoDataset(Dataset):
             z = torch.zeros((n_attributes, n_values))
             for i in range(n_attributes):
                 z[i, config[i]] = 1
-            label = torch.tensor(list(map(int, row)))
+            #label = (config[0]+config[1]) # 2-addends game only
+            label= sum(config) # any number of addends
             self.frame.append((z.view(-1), label))
             
     def get_n_features(self):
@@ -62,41 +60,28 @@ class AttValRecoDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.frame[idx] 
-'''  
-    
-        
-## define AttValReco dataset
-# this has been changed to implement sum game
-        
-class AttValRecoDataset(Dataset):
-    def __init__(self, path, n_attributes, n_values):
-        frame = np.loadtxt(path, dtype="S10")
-        self.frame = []
-        for row in frame:
-            config = list(map(int, row))
-            conf_sum = (config[0]+config[1])
-            conrow = [config[0], config[1], conf_sum]
-            z = torch.zeros((n_attributes, n_values))
-            for i in range(n_attributes):
-                z[i, config[i]] = 1
-            s_inp = torch.cat((z[0],z[1]))
-            label=torch.zeros(n_attributes*n_values)
-            label[conf_sum] = 1
-            self.frame.append((s_inp, label))
 
-    def get_n_features(self):
-        return self.frame[0][0].size(0)
+## define Reconstruction loss     
+class ReconstructionLoss:
+    def __call__(
+        self,
+        sender_input,
+        _message,
+        _receiver_input,
+        receiver_output,
+        labels,
+        _aux_input,
+    ):
+        return self.reconstruction_loss(receiver_output, labels)
 
-    def __len__(self):
-        return len(self.frame)
-
-    def __getitem__(self, idx):
-        return self.frame[idx]
+    @staticmethod
+    def reconstruction_loss(receiver_output, labels):
+        acc = (receiver_output.argmax(dim=1) == labels).detach().float()
+        loss = F.cross_entropy(receiver_output, labels, reduction="none")
+        return loss, {"acc": acc}
 
 
-
-
-# the following section specifies parameters that are specific to our games: we will also inherit the
+    # the following section specifies parameters that are specific to our games: we will also inherit the
 # standard EGG parameters from https://github.com/facebookresearch/EGG/blob/main/egg/core/util.py
 def get_params(params):
     parser = argparse.ArgumentParser()
@@ -107,12 +92,6 @@ def get_params(params):
         default="reco",
         help="Selects whether to play a reco(nstruction) or discri(mination) game (default: reco)",
     )
-
-     # arguments concerning the input data and how they are processed
- #   parser.add_argument(
-  #      "--game_set", type=str, default="comp",
-  #      help="Selects whether labels are position-explicit ("exp") or ("comp") compressed (default: comp)",
-  #  )
     parser.add_argument(
         "--train_data", type=str, default=None, help="Path to the train data"
     )
@@ -210,7 +189,10 @@ def main(params):
     if opts.validation_batch_size == 0:
         opts.validation_batch_size = opts.batch_size
     print(opts, flush=True)
-
+    
+    
+    # discri is not part of sum_game and is inherited from previous basic_game setup 
+    
     # the following if statement controls aspects specific to the two game tasks: loss, input data and architecture of the Receiver
     # (the Sender is identical in both cases, mapping a single input attribute-value vector to a variable-length message)
     if opts.game_type == "discri":
@@ -256,35 +238,27 @@ def main(params):
         # note that this will be embedded in a wrapper below to define the full agent
         receiver = DiscriReceiver(n_features=n_features, n_hidden=opts.receiver_hidden)
         
-    else:  # reco game
-
-        def loss(
-            sender_input, _message, _receiver_input, receiver_output, labels, _aux_input
-        ):
-            # in the case of the recognition game, for each attribute we compute a different cross-entropy score
-            # based on comparing the probability distribution produced by the Receiver over the values of each attribute
-            # with the corresponding ground truth, and then averaging across attributes
-            # accuracy is instead computed by considering as a hit only cases where, for each attribute, the Receiver
-            # assigned the largest probability to the correct value
-            # most of this function consists of the usual pytorch madness needed to reshape tensors in order to perform these computations
-            n_attributes = opts.n_attributes
-            n_values = opts.n_values
-            batch_size = sender_input.size(0)
-            receiver_output = receiver_output.view(batch_size * n_attributes, n_values)
-            receiver_guesses = receiver_output.argmax(dim=1)
-            correct_samples = (
-                (receiver_guesses == labels.view(-1))
-                .view(batch_size, n_attributes)
-                .detach()
-            )
-            acc = (torch.sum(correct_samples, dim=-1) == n_attributes).float()
-            labels = labels.view(batch_size * n_attributes)
+    else:  # sum game is played instead of Reco 
+        
+         def loss(
+            _sender_input,
+            _message,
+            _receiver_input,
+            receiver_output,
+            labels,
+            _aux_input,
+           ):
+            # in the discriminative case, accuracy is computed by comparing the index with highest score in Receiver output (a distribution of unnormalized
+            # probabilities over possible values) and the corresponding label read from input. 
+            acc = (receiver_output.argmax(dim=1) == labels).detach().float()
+            # similarly, the loss computes cross-entropy between the Receiver-produced target-position probability distribution and the labels
             loss = F.cross_entropy(receiver_output, labels, reduction="none")
-            loss = loss.view(batch_size, -1).mean(dim=1)
+            #print(loss, labels, _receiver_input, receiver_output, _message)
+            print("acc", acc, "\n", "input_nums", _sender_input, "\n", "labels", labels, "\n", "messages", _message)
             return loss, {"acc": acc}
 
         # again, see data_readers.py in this directory for the AttValRecoDataset data reading class
-        train_loader = DataLoader(
+         train_loader = DataLoader(
             AttValRecoDataset(
                 path=opts.train_data,
                 n_attributes=opts.n_attributes,
@@ -293,8 +267,8 @@ def main(params):
             batch_size=opts.batch_size,
             shuffle=True,
             num_workers=1,
-        )
-        test_loader = DataLoader(
+          )
+         test_loader = DataLoader(
             AttValRecoDataset(
                 path=opts.validation_data,
                 n_attributes=opts.n_attributes,
@@ -303,13 +277,13 @@ def main(params):
             batch_size=opts.validation_batch_size,
             shuffle=False,
             num_workers=1,
-        )
+         )
         # the number of features for the Receiver (input) and the Sender (output) is given by n_attributes*n_values because
         # they are fed/produce 1-hot representations of the input vectors
-        n_features = opts.n_attributes * opts.n_values
+         n_features = opts.n_attributes * opts.n_values
         # we define here the core of the receiver for the discriminative game, see the architectures.py file for details
         # this will be embedded in a wrapper below to define the full architecture
-        receiver = RecoReceiver(n_features=n_features, n_hidden=opts.receiver_hidden)
+         receiver = RecoReceiver(n_features=n_features, n_hidden=opts.receiver_hidden)
 
     # we are now outside the block that defined game-type-specific aspects of the games: note that the core Sender architecture
     # (see architectures.py for details) is shared by the two games (it maps an input vector to a hidden layer that will be use to initialize
